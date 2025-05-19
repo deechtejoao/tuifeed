@@ -1,9 +1,12 @@
-
-  _____     _ ___           _ 
- |_   _|  _(_) __|__ ___ __| |
-   | || || | | _/ -_) -_) _` |
-   |_| \_,_|_|_|\___\___\__,_|
-                               
+```
+______            _ _____     _ 
+|  ___|          | |_   _|   (_)
+| |_ ___  ___  __| | | |_   _ _ 
+|  _/ _ \/ _ \/ _` | | | | | | |
+| ||  __/  __/ (_| | | | |_| | |
+\_| \___|\___|\__,_| \_/\__,_|_|                                
+```
+                            
 A personal aggregator of rss feeds, take your terminal and track feeds without needing too much unnecessary adornment.
 
 

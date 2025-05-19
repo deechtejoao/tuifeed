@@ -4,9 +4,10 @@
       "name": "Hacker News",
       "url": "https://hnrss.org/frontpage"
     },
+
     {
-      "name": "Ars Technica",
-      "url": "https://feeds.arstechnica.com/arstechnica/index"
+      "name": "9to5mac",
+      "url": "http://9to5mac.com/rss"
     }
   ]
 }
