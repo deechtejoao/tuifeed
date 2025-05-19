@@ -1,21 +1,12 @@
 import feedparser
 import json
 import subprocess
-from colorama import Fore, Style, init
-from bs4 import BeautifulSoup
 import webbrowser
-
-init()  # Initialize colorama
-
-FEED_COLORS = [Fore.RED, Fore.GREEN, Fore.BLUE, Fore.YELLOW, Fore.MAGENTA, Fore.CYAN, Fore.WHITE]
-
-def clean_html(html):
-    """Remove HTML tags from a string."""
-    soup = BeautifulSoup(html, 'html.parser')
-    return soup.get_text().strip()
+import time
+from datetime import datetime, timedelta
 
 def fetch_feeds():
-    """Fetch and parse all feeds from config.json."""
+    """Fetch and parse all feeds from config.json, filtering by age."""
     try:
         with open('config.json', 'r') as f:
             config = json.load(f)
@@ -26,27 +17,46 @@ def fetch_feeds():
         print("Error: config.json is not valid JSON.")
         return []
 
+    MAX_AGE_HOURS = 48  # Extend this as needed
+    current_time = datetime.now()
+    age_limit = timedelta(hours=MAX_AGE_HOURS)
+
     articles = []
-    for idx, feed in enumerate(config.get('feeds', [])):
+    for feed in config.get('feeds', []):
         name = feed.get('name')
         url = feed.get('url')
         if not name or not url:
             continue
 
-        color = FEED_COLORS[idx % len(FEED_COLORS)]
-        print(f"{color}Fetching {name}...{Style.RESET_ALL}")
+        print(f"Fetching {name}...")
 
         parsed_feed = feedparser.parse(url)
         if parsed_feed.bozo:
-            print(f"{color}Error fetching {name}: {parsed_feed.bozo_exception}{Style.RESET_ALL}")
+            print(f"Error fetching {name}: {parsed_feed.bozo_exception}")
             continue
 
-        for entry in parsed_feed.entries[:5]:
+        for entry in parsed_feed.entries:
+            # Attempt to parse published time
+            published_time = None
+            if 'published_parsed' in entry:
+                try:
+                    published_time = datetime.fromtimestamp(
+                        time.mktime(entry.published_parsed)
+                    )
+                except Exception as e:
+                    print(f"Error parsing date for {entry.title}: {e}")
+                    continue
+
+            if published_time is None:
+                continue  # Skip entries without a valid date
+
+            if current_time - published_time > age_limit:
+                continue  # Skip entries older than MAX_AGE_HOURS
+
             articles.append({
                 'feed': name,
                 'title': entry.get('title', 'No title'),
                 'link': entry.get('link', 'No link'),
-                'summary': clean_html(entry.get('summary', 'No summary')),
             })
     return articles
 
