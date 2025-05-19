@@ -1,16 +1,63 @@
 import feedparser
 import json
+import os
 import subprocess
 import webbrowser
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 import time
 
-MAX_AGE_HOURS = 24  # Adjust as needed
-MAX_WORKERS = 5     # Threads for concurrent feed fetching
+# --- Configuration ---
+MAX_AGE_HOURS = 24
+MAX_WORKERS = 100
+CACHE_DIR = ".cache"
+CACHE_FILE = os.path.join(CACHE_DIR, "rss_cache.json")
+
+# --- Cache Management Functions ---
+
+def read_cache():
+    """Load cached articles if they exist and are fresh."""
+    if not os.path.exists(CACHE_FILE):
+        return []
+
+    try:
+        with open(CACHE_FILE, 'r') as f:
+            cache_data = json.load(f)
+
+        timestamp = datetime.fromisoformat(cache_data.get("timestamp", ""))
+        cached_articles = cache_data.get("articles", [])
+
+        # Filter out expired articles
+        current_time = datetime.now()
+        age_limit = timedelta(hours=MAX_AGE_HOURS)
+        valid_articles = [
+            a for a in cached_articles
+            if current_time - datetime.fromisoformat(a['timestamp']) <= age_limit
+        ]
+        print(f"Loaded {len(valid_articles)} cached articles.")
+        return valid_articles
+    except Exception as e:
+        print(f"Error reading cache: {e}")
+        return []
+
+
+def write_cache(articles):
+    """Save merged articles with current timestamp."""
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    cache_data = {
+        "timestamp": datetime.now().isoformat(),
+        "articles": articles
+    }
+    try:
+        with open(CACHE_FILE, 'w') as f:
+            json.dump(cache_data, f, indent=2)
+    except Exception as e:
+        print(f"Error writing cache: {e}")
+
+# --- Feed Fetching Functions ---
 
 def fetch_feed(feed):
-    """Fetch and process a single feed."""
+    """Fetch and process a single feed (for concurrent execution)."""
     name = feed.get('name')
     url = feed.get('url')
     if not name or not url:
@@ -30,10 +77,9 @@ def fetch_feed(feed):
 
     current_time = datetime.now()
     age_limit = timedelta(hours=MAX_AGE_HOURS)
-    articles = []
+    new_articles = []
 
     for entry in parsed_feed.entries:
-        # Parse publication time
         if 'published_parsed' not in entry:
             continue
         try:
@@ -42,15 +88,17 @@ def fetch_feed(feed):
             continue
 
         if current_time - published_time > age_limit:
-            continue  # Skip old entries
+            continue
 
-        articles.append({
+        new_articles.append({
             'feed': name,
             'title': entry.get('title', 'No title'),
             'link': entry.get('link', 'No link'),
+            'timestamp': published_time.isoformat()
         })
 
-    return articles
+    return new_articles
+
 
 def fetch_feeds():
     """Fetch and parse all feeds concurrently."""
@@ -64,6 +112,7 @@ def fetch_feeds():
     feeds = config.get('feeds', [])
     results = []
 
+    print("Fetching feeds concurrently...")
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         futures = [executor.submit(fetch_feed, feed) for feed in feeds]
         for future in futures:
@@ -73,6 +122,8 @@ def fetch_feeds():
                 print(f"Error in feed fetch thread: {e}")
 
     return results
+
+# --- FZF and Main Functions ---
 
 def get_fzf_selection(options):
     """Use fzf to select an item from a list."""
@@ -89,13 +140,40 @@ def get_fzf_selection(options):
     stdout, _ = fzf.communicate(input='\n'.join(options).encode('utf-8'))
     return stdout.decode('utf-8').strip() if fzf.returncode == 0 else None
 
+
 def main():
-    articles = fetch_feeds()
-    if not articles:
+    # Load cached articles
+    cached_articles = read_cache()
+
+    # Fetch new articles
+    print("Fetching new articles...")
+    new_articles = fetch_feeds()
+
+    # Avoid duplicates by link
+    seen_links = set()
+    merged_articles = []
+
+    # Add new articles
+    for a in new_articles:
+        if a['link'] not in seen_links and a['link'] != 'No link':
+            seen_links.add(a['link'])
+            merged_articles.append(a)
+
+    # Add cached articles (if not already added)
+    for a in cached_articles:
+        if a['link'] not in seen_links and a['link'] != 'No link':
+            seen_links.add(a['link'])
+            merged_articles.append(a)
+
+    # Update cache with merged list
+    write_cache(merged_articles)
+
+    if not merged_articles:
         print("No articles found.")
         return
 
-    fzf_options = [f"{a['feed']} | {a['title']}" for a in articles]
+    # Format for fzf
+    fzf_options = [f"{a['feed']} | {a['title']}" for a in merged_articles]
 
     while True:
         selected = get_fzf_selection(fzf_options)
@@ -103,7 +181,7 @@ def main():
             print("Exiting...")
             break
 
-        for article in articles:
+        for article in merged_articles:
             if f"{article['feed']} | {article['title']}" == selected:
                 link = article['link']
                 if link and link != 'No link':
