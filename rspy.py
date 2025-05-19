@@ -1,6 +1,7 @@
 import feedparser
 import json
 import os
+import requests
 import subprocess
 import webbrowser
 from datetime import datetime, timedelta
@@ -8,15 +9,15 @@ from concurrent.futures import ThreadPoolExecutor
 import time
 
 # --- Configuration ---
-MAX_AGE_HOURS = 24
-MAX_WORKERS = 100
+MAX_AGE_HOURS = 24  # Articles older than this won't be shown
+MAX_WORKERS = 5     # Max number of concurrent feed fetchers
 CACHE_DIR = ".cache"
 CACHE_FILE = os.path.join(CACHE_DIR, "rss_cache.json")
 
-# --- Cache Management Functions ---
+# --- Cache Management ---
 
 def read_cache():
-    """Load cached articles if they exist and are fresh."""
+    """Load and filter cached articles."""
     if not os.path.exists(CACHE_FILE):
         return []
 
@@ -24,12 +25,10 @@ def read_cache():
         with open(CACHE_FILE, 'r') as f:
             cache_data = json.load(f)
 
-        timestamp = datetime.fromisoformat(cache_data.get("timestamp", ""))
         cached_articles = cache_data.get("articles", [])
-
-        # Filter out expired articles
         current_time = datetime.now()
         age_limit = timedelta(hours=MAX_AGE_HOURS)
+
         valid_articles = [
             a for a in cached_articles
             if current_time - datetime.fromisoformat(a['timestamp']) <= age_limit
@@ -42,7 +41,7 @@ def read_cache():
 
 
 def write_cache(articles):
-    """Save merged articles with current timestamp."""
+    """Save articles with timestamp."""
     os.makedirs(CACHE_DIR, exist_ok=True)
     cache_data = {
         "timestamp": datetime.now().isoformat(),
@@ -54,10 +53,10 @@ def write_cache(articles):
     except Exception as e:
         print(f"Error writing cache: {e}")
 
-# --- Feed Fetching Functions ---
+# --- Feed Fetching ---
 
 def fetch_feed(feed):
-    """Fetch and process a single feed (for concurrent execution)."""
+    """Fetch and parse a single feed."""
     name = feed.get('name')
     url = feed.get('url')
     if not name or not url:
@@ -66,13 +65,16 @@ def fetch_feed(feed):
     print(f"Fetching {name}...")
 
     try:
-        parsed_feed = feedparser.parse(url)
+        headers = {'User-Agent': 'RSSBrowser/1.0'}
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        parsed_feed = feedparser.parse(response.content)
     except Exception as e:
         print(f"Error fetching {name}: {e}")
         return []
 
     if parsed_feed.bozo:
-        print(f"Error fetching {name}: {parsed_feed.bozo_exception}")
+        print(f"Error parsing feed {name}: {parsed_feed.bozo_exception}")
         return []
 
     current_time = datetime.now()
@@ -101,7 +103,7 @@ def fetch_feed(feed):
 
 
 def fetch_feeds():
-    """Fetch and parse all feeds concurrently."""
+    """Fetch feeds concurrently."""
     try:
         with open('config.json', 'r') as f:
             config = json.load(f)
@@ -123,10 +125,10 @@ def fetch_feeds():
 
     return results
 
-# --- FZF and Main Functions ---
+# --- Article Selection ---
 
 def get_fzf_selection(options):
-    """Use fzf to select an item from a list."""
+    """Use fzf to select an article."""
     if not options:
         print("No articles found.")
         return None
@@ -140,16 +142,12 @@ def get_fzf_selection(options):
     stdout, _ = fzf.communicate(input='\n'.join(options).encode('utf-8'))
     return stdout.decode('utf-8').strip() if fzf.returncode == 0 else None
 
+# --- Main Function ---
 
 def main():
-    # Load cached articles
     cached_articles = read_cache()
-
-    # Fetch new articles
-    print("Fetching new articles...")
     new_articles = fetch_feeds()
 
-    # Avoid duplicates by link
     seen_links = set()
     merged_articles = []
 
@@ -165,7 +163,7 @@ def main():
             seen_links.add(a['link'])
             merged_articles.append(a)
 
-    # Update cache with merged list
+    # Update cache
     write_cache(merged_articles)
 
     if not merged_articles:
