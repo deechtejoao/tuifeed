@@ -2,7 +2,7 @@
   "feeds": [
     {
       "name": "Hacker News",
-      "url": "https://hnrss.org/frontpage"
+      "url": "https://hnrss.org/newest"
     }
-  ]
+    ]
 }

@@ -10,7 +10,7 @@ import time
 
 # --- Configuration ---
 MAX_AGE_HOURS = 24  # Articles older than this won't be shown
-MAX_WORKERS = 5     # Max number of concurrent feed fetchers
+MAX_WORKERS = 100     # Max number of concurrent feed fetchers
 CACHE_DIR = ".cache"
 CACHE_FILE = os.path.join(CACHE_DIR, "rss_cache.json")
 
@@ -164,12 +164,24 @@ def main():
 
     # Add cached articles not already added
     for a in cached_articles:
-        if a['link'] not in seen_links and a['link'] != 'No link':
+        if (
+            a['link'] not in seen_links
+            and a['link'] != 'No link'
+            and a['feed'] in current_feed_names
+        ):
             seen_links.add(a['link'])
             merged_articles.append(a)
 
     # Update cache with merged articles
     write_cache(merged_articles)
+
+    # Cleanup
+    if merged_articles:
+        write_cache(merged_articles)
+    else:
+        if os.path.exists(CACHE_FILE):
+            os.remove(CACHE_FILE)
+        print("No valid articles to cache. Cache file removed.")
 
     # ... rest of the main function
     if not merged_articles:
