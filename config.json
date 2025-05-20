@@ -3,11 +3,6 @@
     {
       "name": "Hacker News",
       "url": "https://hnrss.org/frontpage"
-    },
-
-    {
-      "name": "9to5mac",
-      "url": "http://9to5mac.com/rss"
     }
   ]
 }

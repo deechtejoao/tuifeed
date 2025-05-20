@@ -16,11 +16,10 @@ CACHE_FILE = os.path.join(CACHE_DIR, "rss_cache.json")
 
 # --- Cache Management ---
 
-def read_cache():
-    """Load and filter cached articles."""
+def read_cache(current_feed_names):
+    """Load and filter cached articles based on current feed names."""
     if not os.path.exists(CACHE_FILE):
         return []
-
     try:
         with open(CACHE_FILE, 'r') as f:
             cache_data = json.load(f)
@@ -32,13 +31,13 @@ def read_cache():
         valid_articles = [
             a for a in cached_articles
             if current_time - datetime.fromisoformat(a['timestamp']) <= age_limit
+            and a['feed'] in current_feed_names
         ]
         print(f"Loaded {len(valid_articles)} cached articles.")
         return valid_articles
     except Exception as e:
         print(f"Error reading cache: {e}")
         return []
-
 
 def write_cache(articles):
     """Save articles with timestamp."""
@@ -102,16 +101,8 @@ def fetch_feed(feed):
     return new_articles
 
 
-def fetch_feeds():
-    """Fetch feeds concurrently."""
-    try:
-        with open('config.json', 'r') as f:
-            config = json.load(f)
-    except Exception as e:
-        print(f"Error loading config: {e}")
-        return []
-
-    feeds = config.get('feeds', [])
+def fetch_feeds(feeds):
+    """Fetch feeds concurrently using provided feed list."""
     results = []
 
     print("Fetching feeds concurrently...")
@@ -124,7 +115,6 @@ def fetch_feeds():
                 print(f"Error in feed fetch thread: {e}")
 
     return results
-
 # --- Article Selection ---
 
 def get_fzf_selection(options):
@@ -145,27 +135,43 @@ def get_fzf_selection(options):
 # --- Main Function ---
 
 def main():
-    cached_articles = read_cache()
-    new_articles = fetch_feeds()
+    # Load config first
+    try:
+        with open('config.json', 'r') as f:
+            config = json.load(f)
+    except Exception as e:
+        print(f"Error loading config: {e}")
+        return
 
+    feeds = config.get('feeds', [])
+    current_feed_names = {feed['name'] for feed in feeds if 'name' in feed}
+
+    # Read cache with current feeds
+    cached_articles = read_cache(current_feed_names)
+
+    # Fetch new articles
+    new_articles = fetch_feeds(feeds)
+
+    # Merge new and cached articles
     seen_links = set()
     merged_articles = []
 
-    # Add new articles
+    # Add new articles first to prioritize newer ones
     for a in new_articles:
         if a['link'] not in seen_links and a['link'] != 'No link':
             seen_links.add(a['link'])
             merged_articles.append(a)
 
-    # Add cached articles (if not already added)
+    # Add cached articles not already added
     for a in cached_articles:
         if a['link'] not in seen_links and a['link'] != 'No link':
             seen_links.add(a['link'])
             merged_articles.append(a)
 
-    # Update cache
+    # Update cache with merged articles
     write_cache(merged_articles)
 
+    # ... rest of the main function
     if not merged_articles:
         print("No articles found.")
         return
