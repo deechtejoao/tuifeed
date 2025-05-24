@@ -5,14 +5,14 @@ import requests
 import subprocess
 import webbrowser
 from datetime import datetime, timedelta
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 import logging
 from urllib.parse import urljoin
 
 # --- Configuration ---
 MAX_AGE_HOURS = 24  # Articles older than this won't be shown
-MAX_WORKERS = 20
+MAX_WORKERS = 30
 REQUEST_TIMEOUT = 5
 RETRY_ATTEMPTS = 2
 CACHE_DIR = ".cache"
@@ -22,6 +22,135 @@ CACHE_FILE = os.path.join(CACHE_DIR, "rss_cache.json")
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# --- Conditional Request 
+def get_feed_etag_cache():
+    """Get ETag/Last-Modified cache for conditional requests."""
+    etag_file = os.path.join(CACHE_DIR, "feed_etags.json")
+    if os.path.exists(etag_file):
+        try:
+            with open(etag_file, 'r') as f:
+                return json.load(f)
+        except:
+            pass
+    return {}
+
+# PATCH 3: Improved Feed Fetching with Retry Logic
+# Apply this after Patch 2
+
+# REPLACE the existing fetch_feed function with this new one:
+def fetch_feed_with_retry(feed, etag_cache, session):
+    """Fetch feed with retry logic and conditional requests."""
+    name = feed.get('name')
+    url = feed.get('url')
+    if not name or not url:
+        return [], etag_cache
+
+    # Get cached ETag/Last-Modified
+    feed_cache_key = f"{name}:{url}"
+    cached_headers = etag_cache.get(feed_cache_key, {})
+    
+    headers = {
+        'User-Agent': 'RSSBrowser/1.0',
+        'Accept': 'application/rss+xml, application/xml, text/xml',
+        'Accept-Encoding': 'gzip, deflate'
+    }
+    
+    # Add conditional request headers
+    if 'etag' in cached_headers:
+        headers['If-None-Match'] = cached_headers['etag']
+    if 'last-modified' in cached_headers:
+        headers['If-Modified-Since'] = cached_headers['last-modified']
+
+    for attempt in range(RETRY_ATTEMPTS):
+        try:
+            logger.info(f"Fetching {name} (attempt {attempt + 1})")
+            response = session.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
+            
+            # Handle 304 Not Modified
+            if response.status_code == 304:
+                logger.info(f"{name}: Not modified")
+                return [], etag_cache
+            
+            response.raise_for_status()
+            
+            # Update ETag cache
+            new_cache_data = {}
+            if 'etag' in response.headers:
+                new_cache_data['etag'] = response.headers['etag']
+            if 'last-modified' in response.headers:
+                new_cache_data['last-modified'] = response.headers['last-modified']
+            
+            if new_cache_data:
+                etag_cache[feed_cache_key] = new_cache_data
+            
+            break
+            
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"Attempt {attempt + 1} failed for {name}: {e}")
+            if attempt == RETRY_ATTEMPTS - 1:
+                return [], etag_cache
+            time.sleep(0.5 * (attempt + 1))  # Exponential backoff
+
+    # Parse feed
+    try:
+        # Use response.content for better encoding handling
+        parsed_feed = feedparser.parse(response.content)
+    except Exception as e:
+        logger.error(f"Error parsing {name}: {e}")
+        return [], etag_cache
+
+    if parsed_feed.bozo and parsed_feed.bozo_exception:
+        logger.warning(f"Feed parsing warning for {name}: {parsed_feed.bozo_exception}")
+
+    # Process entries more efficiently
+    current_time = datetime.now()
+    age_limit = timedelta(hours=MAX_AGE_HOURS)
+    new_articles = []
+
+    for entry in parsed_feed.entries:
+        # Skip entries without publication date
+        published_time = None
+        
+        # Try multiple date fields
+        for date_field in ['published_parsed', 'updated_parsed']:
+            if hasattr(entry, date_field) and getattr(entry, date_field):
+                try:
+                    published_time = datetime.fromtimestamp(time.mktime(getattr(entry, date_field)))
+                    break
+                except (ValueError, OverflowError):
+                    continue
+        
+        if not published_time:
+            continue
+
+        # Age check
+        if current_time - published_time > age_limit:
+            continue
+
+        # Get article link - handle relative URLs
+        link = entry.get('link', '')
+        if link and not link.startswith(('http://', 'https://')):
+            link = urljoin(url, link)
+
+        new_articles.append({
+            'feed': name,
+            'title': entry.get('title', 'No title').strip(),
+            'link': link,
+            'timestamp': published_time.isoformat(),
+            'summary': entry.get('summary', '')[:200] + '...' if entry.get('summary') else ''
+        })
+
+    logger.info(f"Fetched {len(new_articles)} new articles from {name}")
+    return new_articles, etag_cache
+
+def save_feed_etag_cache(etag_cache):
+    """Save ETag/Last-Modified cache."""
+    etag_file = os.path.join(CACHE_DIR, "feed_etags.json")
+    try:
+        with open(etag_file, 'w') as f:
+            json.dump(etag_cache, f)
+    except Exception as e:
+        logger.error(f"Error saving ETag cache: {e}")
 
 # --- Cache Management ---
 
@@ -111,19 +240,52 @@ def fetch_feed(feed):
 
 
 def fetch_feeds(feeds):
-    """Fetch feeds concurrently using provided feed list."""
-    results = []
+    """Fetch feeds concurrently with optimizations."""
+    if not feeds:
+        return []
 
-    print("Fetching feeds concurrently...")
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        futures = [executor.submit(fetch_feed, feed) for feed in feeds]
-        for future in futures:
-            try:
-                results.extend(future.result())
-            except Exception as e:
-                print(f"Error in feed fetch thread: {e}")
+    etag_cache = get_feed_etag_cache()
+    all_articles = []
+    
+    # Use session for connection pooling
+    session = requests.Session()
+    
+    # Configure session
+    adapter = requests.adapters.HTTPAdapter(
+        pool_connections=MAX_WORKERS,
+        pool_maxsize=MAX_WORKERS,
+        max_retries=0  # We handle retries manually
+    )
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
 
-    return results
+    logger.info(f"Fetching {len(feeds)} feeds with {MAX_WORKERS} workers...")
+    
+    try:
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            # Submit all tasks
+            future_to_feed = {
+                executor.submit(fetch_feed_with_retry, feed, etag_cache, session): feed 
+                for feed in feeds
+            }
+            
+            # Process completed tasks as they finish
+            for future in as_completed(future_to_feed):
+                try:
+                    articles, updated_etag_cache = future.result()
+                    all_articles.extend(articles)
+                    etag_cache.update(updated_etag_cache)
+                except Exception as e:
+                    feed = future_to_feed[future]
+                    logger.error(f"Error processing feed {feed.get('name', 'unknown')}: {e}")
+    
+    finally:
+        session.close()
+        save_feed_etag_cache(etag_cache)
+
+    logger.info(f"Total articles fetched: {len(all_articles)}")
+    return all_articles
+
 # --- Article Selection ---
 
 def get_fzf_selection(options):
