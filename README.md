@@ -20,9 +20,10 @@ A personal aggregator of rss feeds, take your terminal and track feeds without n
 2.  A terminal emulator like  [alacritty](https://alacritty.org/)
 3. Python installed
 4. feedparser library
+5. [fzf](https://github.com/junegunn/fzf)
 
 ```bash
-pip install feedparser
+pip install feedparser requests 
 ```
 
 ### Configuring

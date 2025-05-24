@@ -7,12 +7,21 @@ import webbrowser
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 import time
+import logging
+from urllib.parse import urljoin
 
 # --- Configuration ---
 MAX_AGE_HOURS = 24  # Articles older than this won't be shown
-MAX_WORKERS = 100     # Max number of concurrent feed fetchers
+MAX_WORKERS = 20
+REQUEST_TIMEOUT = 5
+RETRY_ATTEMPTS = 2
 CACHE_DIR = ".cache"
 CACHE_FILE = os.path.join(CACHE_DIR, "rss_cache.json")
+
+# --- Logging Configuration
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 
 # --- Cache Management ---
 

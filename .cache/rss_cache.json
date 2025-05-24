@@ -1,0 +1,149 @@
+{
+  "timestamp": "2025-05-24T11:27:50.748305",
+  "articles": [
+    {
+      "feed": "Hacker News",
+      "title": "F-35 fighter flying in Texas sent data to an air base 5K miles away in Denmark",
+      "link": "https://www.businessinsider.com/f-35-stealth-fighter-texas-sent-data-denmark-command-center-2025-5",
+      "timestamp": "2025-05-24T14:20:33"
+    },
+    {
+      "feed": "Hacker News",
+      "title": "Ask HN: How can we reliably verify content isn't AI generated?",
+      "link": "https://news.ycombinator.com/item?id=44081300",
+      "timestamp": "2025-05-24T14:19:40"
+    },
+    {
+      "feed": "Hacker News",
+      "title": "Tesla Ambient Light",
+      "link": "https://github.com/alex-aprm/TeslaAmbientLight",
+      "timestamp": "2025-05-24T14:17:54"
+    },
+    {
+      "feed": "Hacker News",
+      "title": "Show HN: I made a site that lets you collect and rank features your users want",
+      "link": "https://suggestionbox.page",
+      "timestamp": "2025-05-24T14:16:06"
+    },
+    {
+      "feed": "Hacker News",
+      "title": "The Bargain of Working Hard and Getting a Job Simply Doesn't Hold Anymore",
+      "link": "https://slate.com/technology/2025/05/unemployment-job-market-careers-college-grads-software-artificial-intelligence.html",
+      "timestamp": "2025-05-24T14:15:14"
+    },
+    {
+      "feed": "Hacker News",
+      "title": "Quantum gravity cannot be both consistent and complete",
+      "link": "https://arxiv.org/abs/2505.11773",
+      "timestamp": "2025-05-24T14:13:17"
+    },
+    {
+      "feed": "Hacker News",
+      "title": "An Invitation to Neuroalgebraic Geometry",
+      "link": "https://arxiv.org/abs/2501.18915",
+      "timestamp": "2025-05-24T14:12:55"
+    },
+    {
+      "feed": "Hacker News",
+      "title": "Phantom Dependencies: is your requirements.txt haunted?",
+      "link": "https://www.youtube.com/watch?v=x9K3xPmi_tg",
+      "timestamp": "2025-05-24T14:11:17"
+    },
+    {
+      "feed": "Hacker News",
+      "title": "A free, open-source, local-first Markdown editor",
+      "link": "https://noteworthy.ink/",
+      "timestamp": "2025-05-24T14:08:27"
+    },
+    {
+      "feed": "Hacker News",
+      "title": "Signatures of chiral superconductivity in rhombohedral graphene",
+      "link": "https://www.nature.com/articles/s41586-025-09169-7",
+      "timestamp": "2025-05-24T14:06:59"
+    },
+    {
+      "feed": "Hacker News",
+      "title": "LinkedIn interview scams",
+      "link": "https://www.himthe.dev/blog/linkedin-interview-scams",
+      "timestamp": "2025-05-24T14:04:59"
+    },
+    {
+      "feed": "Hacker News",
+      "title": "X continues to suffer bugs following Thursday outage",
+      "link": "https://techcrunch.com/2025/05/23/x-continues-to-suffer-bugs-following-thursday-outage/",
+      "timestamp": "2025-05-24T14:04:32"
+    },
+    {
+      "feed": "Hacker News",
+      "title": "SteamOS",
+      "link": "https://store.steampowered.com/steamos",
+      "timestamp": "2025-05-24T14:03:25"
+    },
+    {
+      "feed": "Hacker News",
+      "title": "'Which is it?' RFK Jr. waffles on cuts to lead poisoning prevention efforts",
+      "link": "https://www.npr.org/sections/shots-health-news/2025/05/21/nx-s1-5405551/lead-poisoning-cdc-hhs-rfk-jr-trump-baldwin-senate",
+      "timestamp": "2025-05-24T14:03:17"
+    },
+    {
+      "feed": "Hacker News",
+      "title": "Maxup \u2013 A modular ecosystem for youth development using AI",
+      "link": "https://github.com/flippe2/MAXUP",
+      "timestamp": "2025-05-24T13:56:46"
+    },
+    {
+      "feed": "Hacker News",
+      "title": "Coding Assistants Threaten the Software Supply Chain",
+      "link": "https://martinfowler.com/articles/exploring-gen-ai/software-supply-chain-attack-surface.html",
+      "timestamp": "2025-05-24T13:54:45"
+    },
+    {
+      "feed": "Hacker News",
+      "title": "Show HN: KBAI \u2013 Build Hybrid AI with Deterministic Reasoning",
+      "link": "https://www.usekbai.com/",
+      "timestamp": "2025-05-24T13:54:27"
+    },
+    {
+      "feed": "Hacker News",
+      "title": "The Soviet People's Car: The Enduring Legacy of the Lada",
+      "link": "https://www.comradegallery.com/journal/the-enduring-legacy-of-the-lada",
+      "timestamp": "2025-05-24T13:49:45"
+    },
+    {
+      "feed": "Hacker News",
+      "title": "X outage disrupts logins and key features",
+      "link": "https://economictimes.indiatimes.com/tech/technology/twitter-down-outage-continues-to-disrupt-logins-and-key-features/articleshow/121381285.cms?from=mdr",
+      "timestamp": "2025-05-24T13:46:38"
+    },
+    {
+      "feed": "Hacker News",
+      "title": "Don't \"buy\" e-books from Oxford University Press",
+      "link": "https://kelar.org/~bandali/2025/05/20/no-oup.html",
+      "timestamp": "2025-05-24T13:45:38"
+    },
+    {
+      "feed": "Hacker News",
+      "title": "Tim Cook's Bad Year Keeps Getting Worse",
+      "link": "https://www.wsj.com/tech/ai/apple-ceo-tim-cook-tariffs-ai-48049d0c",
+      "timestamp": "2025-05-24T13:45:33"
+    },
+    {
+      "feed": "Hacker News",
+      "title": "Peer Programming with LLMs, for Senior+ Engineers",
+      "link": "https://pmbanugo.me/blog/peer-programming-with-llms",
+      "timestamp": "2025-05-24T13:45:02"
+    },
+    {
+      "feed": "Hacker News",
+      "title": "How the Russian automotive sector was driven off a cliff",
+      "link": "https://tochnyi.info/2025/05/how-the-russian-automotive-sector-was-driven-off-a-clif/",
+      "timestamp": "2025-05-24T13:44:31"
+    },
+    {
+      "feed": "Hacker News",
+      "title": "Show HN: Calculate Your Trip Cost",
+      "link": "https://sekor.eu.org/tripcost/",
+      "timestamp": "2025-05-24T13:44:28"
+    }
+  ]
+}
