@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 from urllib.parse import urljoin
 
+import webbrowser
 import feedparser
 import requests
 from concurrent.futures import ThreadPoolExecutor
