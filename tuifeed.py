@@ -173,12 +173,18 @@ def choose(opts: List[str]) -> Optional[str]:
 
 # MAIN
 def _config() -> Dict:
-    try:
-        return json.load(open("config.json"))
-    except Exception as e:
-        log.error("config: %s", e)
-        return {}
-
+    config_paths = [
+        Path.home() / ".config" / "tuifeed" / "config.json",
+        Path("config.json")
+    ]
+    for config_path in config_paths:
+        if config_path.exists():
+            try:
+                return json.load(config_path.open())
+            except Exception as e:
+                log.error("config: %s", e)
+    log.error("No valid config file found.")
+    return {}
 
 async def async_main() -> None:
     feeds = _config().get("feeds", [])
