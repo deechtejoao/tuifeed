@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from __future__ import annotations
-import asyncio, json, logging, time, aiohttp, feedparser, webbrowser
+import asyncio, json, logging, time, aiohttp, feedparser, webbrowser, sys, argparse, listparser
 from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -16,6 +16,8 @@ MAX_CONCURRENCY = 20
 CACHE_DIR = Path(".cache")
 CACHE_FILE = CACHE_DIR / "rss_cache.json"
 HEADERS = {"User-Agent": "tuifeed/3.0 (aiohttp)"}
+CONFIG_DIR  = Path.home() / ".config" / "tuifeed"
+CONFIG_PATH = CONFIG_DIR / "config.json"
 
 # LOGGING
 logging.basicConfig(
@@ -175,7 +177,7 @@ def choose(opts: List[str]) -> Optional[str]:
 def _config() -> Dict:
     config_paths = [
         Path.home() / ".config" / "tuifeed" / "config.json",
-        Path("config.json")
+        Path("config.json"),
     ]
     for config_path in config_paths:
         if config_path.exists():
@@ -185,6 +187,7 @@ def _config() -> Dict:
                 log.error("config: %s", e)
     log.error("No valid config file found.")
     return {}
+
 
 async def async_main() -> None:
     feeds = _config().get("feeds", [])
@@ -213,7 +216,43 @@ async def async_main() -> None:
                 break
 
 
+def import_opml(opml_file: Path) -> None:
+    if listparser is None:
+        sys.exit("Error: pip install listparser to enable OPML import")
+
+    if not opml_file.exists():
+        sys.exit(f"Error: OPML file not found -> {opml_file}")
+
+    result = listparser.parse(opml_file.read_text(encoding="utf-8"))
+    feeds = [
+        {"name": f["title"], "url": f["url"]}
+        for f in result.feeds
+        if f.get("title") and f.get("url")
+    ]
+    if not feeds:
+        sys.exit("Error: no valid feeds inside OPML")
+
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    CONFIG_PATH.write_text(json.dumps({"feeds": feeds}, indent=2), encoding="utf-8")
+    log.info("Imported %d feeds -> %s", len(feeds), CONFIG_PATH)
+
+
 def main() -> None:
+    parser = argparse.ArgumentParser(prog="tuifeed")
+    parser.add_argument(
+        "-p",
+        "--opml",
+        metavar="FILE",
+        help="import OPML and write ~/.config/tuifeed/config.json",
+    )
+    args = parser.parse_args()
+
+    # OPML import mode
+    if args.opml:
+        import_opml(Path(args.opml).expanduser())
+        return
+
+    # normal execution
     try:
         asyncio.run(async_main())
     except KeyboardInterrupt:
