@@ -23,11 +23,11 @@ A personal aggregator of rss feeds, take your terminal and track feeds without n
 5. [fzf](https://github.com/junegunn/fzf)
 
 ```bash
-pip install feedparser requests 
+pip install feedparser requests listparser
 ```
 
 ### Configuring
-> Choose a directory to store your cache something like ~/documents/tuifeed and clone the repository from now on you will set up your config.json and add your favorite feeds.
+> Create e directory ~/.config/tuifeed/ and after create your config.json like this: 
 
     {
       "feeds": [
@@ -45,6 +45,11 @@ pip install feedparser requests
     
 This is the current configuration example, probably changes for efficiency will be made.
 
+
+### Importing feeds
+```bash
+tuifeed -p feeds.opml
+```
 
 ### Images
 ![image1](images/1.png)
